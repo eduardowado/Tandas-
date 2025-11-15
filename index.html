@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Tandas V6 (Entregas)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        .grid-cell { min-height: 50px; font-size: 0.75rem; line-height: 1.1; word-break: break-word; cursor: pointer; user-select: none; }
+        .grid-cell:hover { filter: brightness(0.95); }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .slide-up { animation: slideUp 0.3s ease-out forwards; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+
+    <div id="login-screen" class="flex items-center justify-center min-h-screen">
+        <div class="w-full max-w-sm p-8 bg-white rounded-2xl shadow-lg">
+            <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Administrar Tanda</h1>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-600 mb-2">Contraseña</label>
+                <input type="password" id="password" class="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <button id="btn-login" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition">Entrar</button>
+            <div id="login-error" class="text-red-500 text-sm text-center mt-4"></div>
+        </div>
+    </div>
+
+    <div id="app-screen" class="hidden flex flex-col h-screen relative">
+        <header class="bg-slate-900 text-white p-4 shadow-md flex-none z-20 flex justify-between items-center">
+            <div><h1 id="tanda-name" class="text-xl font-bold">Cargando...</h1><p class="text-xs text-slate-400">Panel de Control V6</p></div>
+            <button id="btn-logout" class="text-sm bg-red-600 px-3 py-1 rounded hover:bg-red-700 transition flex items-center gap-1"><i class="ph-bold ph-sign-out"></i> Salir</button>
+        </header>
+
+        <nav class="bg-white shadow-sm flex-none z-10 border-b">
+            <div class="container mx-auto flex overflow-x-auto">
+                <button data-tab="config" class="tab-btn px-4 py-3 text-sm font-semibold text-gray-500 border-b-4 border-transparent hover:text-blue-600 whitespace-nowrap"><i class="ph-fill ph-gear mr-1"></i> Configuración</button>
+                <button data-tab="participantes" class="tab-btn px-4 py-3 text-sm font-semibold text-gray-500 border-b-4 border-transparent hover:text-blue-600 whitespace-nowrap"><i class="ph-fill ph-users-three mr-1"></i> Participantes</button>
+                <button data-tab="cuadricula" class="tab-btn px-4 py-3 text-sm font-semibold text-gray-500 border-b-4 border-transparent hover:text-blue-600 whitespace-nowrap"><i class="ph-fill ph-squares-four mr-1"></i> Cuadrícula (Edición)</button>
+                <button data-tab="pagos" class="tab-btn px-4 py-3 text-sm font-semibold text-gray-500 border-b-4 border-transparent hover:text-blue-600 whitespace-nowrap"><i class="ph-fill ph-money mr-1"></i> Pagos y Reparto</button>
+                <button data-tab="archivar" class="tab-btn px-4 py-3 text-sm font-semibold text-gray-500 border-b-4 border-transparent hover:text-blue-600 whitespace-nowrap"><i class="ph-fill ph-archive mr-1"></i> Archivar</button>
+            </div>
+        </nav>
+
+        <main class="flex-grow overflow-y-auto p-4 bg-gray-100 pb-24">
+            <div class="container mx-auto max-w-6xl">
+                <div id="tab-config" class="tab-content hidden space-y-6">
+                    <form id="form-config" class="bg-white p-6 rounded-lg shadow-sm border">
+                        <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><i class="ph-duotone ph-sliders"></i> Configuración General</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="text-xs font-bold text-gray-500 uppercase">Nombre Tanda</label><input type="text" id="cfg-nombre" class="w-full p-2 border rounded bg-gray-50"></div>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase">Total Semanas</label><input type="number" id="cfg-semanas" class="w-full p-2 border rounded bg-gray-50"></div>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase">Números por Semana (Filas)</label><input type="number" id="cfg-numeros" class="w-full p-2 border rounded bg-gray-50"></div>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase">Costo por Número ($)</label><input type="number" id="cfg-valor" class="w-full p-2 border rounded bg-gray-50"></div>
+                        </div>
+                        <button type="submit" class="mt-4 bg-slate-700 text-white px-6 py-2 rounded hover:bg-slate-800">Guardar Configuración</button>
+                    </form>
+                </div>
+
+                <div id="tab-participantes" class="tab-content hidden space-y-4">
+                    <div class="bg-white p-4 rounded-lg shadow-sm border flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div><h2 class="text-xl font-bold">Participantes y Números</h2><p class="text-sm text-gray-500">Define quién participa y cuántos números compró.</p></div>
+                        <div class="text-right"><div class="text-sm font-semibold text-gray-600">Total Vendidos</div><div id="part-counter" class="text-2xl font-bold text-blue-600">0</div></div>
+                    </div>
+                    <form id="form-add-part" class="bg-white p-4 rounded-lg shadow-sm border flex gap-2">
+                        <input type="text" id="new-part-name" class="flex-grow p-2 border rounded" placeholder="Nombre del participante..." required>
+                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Agregar</button>
+                    </form>
+                    <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-gray-50 border-b"><tr><th class="p-3">Nombre</th><th class="p-3 text-center w-32">Números</th><th class="p-3 text-center w-20">Borrar</th></tr></thead>
+                            <tbody id="part-table-body" class="divide-y"></tbody>
+                        </table>
+                        <div class="p-4 bg-gray-50 border-t flex justify-end"><button id="btn-save-numbers" class="bg-blue-600 text-white px-6 py-2 rounded font-bold shadow hover:bg-blue-700 flex items-center gap-2"><i class="ph-bold ph-floppy-disk"></i> GUARDAR CAMBIOS</button></div>
+                    </div>
+                </div>
+
+                <div id="tab-cuadricula" class="tab-content hidden h-[calc(100vh-180px)] flex flex-col">
+                    <div class="flex flex-col md:flex-row gap-4 h-full">
+                        <div class="w-full md:w-1/4 bg-white rounded-lg shadow-sm border flex flex-col overflow-hidden">
+                            <div class="p-3 bg-gray-50 border-b"><h3 class="font-bold text-gray-700">1. Selecciona Persona</h3><p class="text-xs text-gray-500">Clic para activar asignación</p></div>
+                            <div id="grid-user-list" class="overflow-y-auto flex-grow p-2 space-y-1"></div>
+                        </div>
+                        <div class="w-full md:w-3/4 bg-white rounded-lg shadow-sm border flex flex-col overflow-hidden">
+                            <div class="p-3 bg-gray-50 border-b flex justify-between items-center">
+                                <div><h3 class="font-bold text-gray-700">2. Dibuja en la Tabla</h3><p class="text-xs text-gray-500">Cambios locales. Usa "Guardar Todo" al final.</p></div>
+                                <div id="grid-status" class="text-sm font-medium px-3 py-1 bg-blue-100 text-blue-800 rounded-full hidden">Modo Asignación</div>
+                            </div>
+                            <div class="overflow-auto flex-grow p-4 bg-slate-50"><table id="cuadricula-table" class="w-full border-collapse bg-white shadow-sm"></table></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-pagos" class="tab-content hidden space-y-6">
+                    <div class="bg-white p-4 rounded-lg shadow-sm border flex items-center gap-4">
+                        <label class="font-bold text-gray-700">Semana de Pago:</label>
+                        <select id="pago-semana-select" class="p-2 border rounded bg-gray-50 w-48 font-medium text-blue-900"></select>
+                    </div>
+                    <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl text-white p-6 shadow-lg">
+                        <h3 class="text-slate-300 text-sm uppercase tracking-wider font-semibold mb-4">REPARTO DE LA TANDA</h3>
+                        <div id="payout-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+                        <div class="p-4 bg-gray-50 border-b font-bold text-gray-700">Control de Aportaciones (Cobranza)</div>
+                        <div id="pago-list" class="divide-y"></div>
+                    </div>
+                </div>
+
+                <div id="tab-archivar" class="tab-content hidden">
+                    <div class="max-w-lg mx-auto bg-white p-8 rounded-lg shadow-md border border-red-100 mt-10">
+                        <h2 class="text-2xl font-bold text-red-600 mb-4 flex items-center gap-2"><i class="ph-fill ph-warning-circle"></i> Reiniciar Tanda</h2>
+                        <p class="text-gray-600 mb-6">Archiva la tanda actual y empieza una nueva desde cero.</p>
+                        <form id="form-archive">
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <input type="text" id="arch-nombre" class="col-span-2 p-2 border rounded" placeholder="Nombre Nueva Tanda" required>
+                                <input type="number" id="arch-semanas" class="p-2 border rounded" placeholder="Semanas" required>
+                                <input type="number" id="arch-numeros" class="p-2 border rounded" placeholder="Números" required>
+                                <input type="number" id="arch-valor" class="p-2 border rounded" placeholder="Valor $" required>
+                            </div>
+                            <button type="submit" class="w-full bg-red-600 text-white font-bold py-3 rounded hover:bg-red-700">ARCHIVAR Y REINICIAR</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="pending-changes-bar" class="fixed bottom-0 left-0 right-0 bg-yellow-400 p-4 shadow-lg z-30 hidden flex justify-between items-center slide-up">
+        <div class="flex items-center gap-3 text-yellow-900 font-bold px-4"><i class="ph-fill ph-warning text-2xl"></i><span>Tienes cambios en la cuadrícula sin guardar.</span></div>
+        <div class="flex gap-3 pr-4"><button id="btn-discard-changes" class="px-4 py-2 bg-white text-yellow-900 font-bold rounded hover:bg-yellow-50">DESHACER</button><button id="btn-commit-changes" class="px-6 py-2 bg-slate-900 text-white font-bold rounded hover:bg-slate-800 shadow-lg">GUARDAR TODO</button></div>
+    </div>
+
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex flex-col items-center justify-center text-white backdrop-blur-sm"><div class="loader mb-4"></div><p id="loading-text" class="text-lg font-semibold">Procesando...</p></div>
+    <div id="toaster" class="fixed bottom-24 right-5 px-6 py-3 rounded shadow-lg text-white font-medium transform translate-y-20 opacity-0 transition-all z-50"></div>
+
+    <script>
+        // --- CONFIGURACIÓN ---
+        // ⚠️ PEGA TU URL AQUI 
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw2L85yws1EoFz2m_6jrtawffuAma8sKeYThMFxU51oFuf8KTdd9-2zc48Rng9nd6Tx/exec"; 
+        
+        let appData = { config: {}, participantes: [], tandaNumeros: [], cuadricula: [], pagos: [] };
+        let storedPassword = sessionStorage.getItem('tandaPass') || "";
+        let uiState = { gridSelectedUser: null, pendingGridChanges: {}, originalGrid: [] };
+
+        if(storedPassword) { login(storedPassword); }
+        document.getElementById('btn-login').onclick = () => login(document.getElementById('password').value);
+        document.getElementById('btn-logout').onclick = () => { sessionStorage.removeItem('tandaPass'); location.reload(); };
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.replace('text-blue-600', 'text-gray-500');
+                    b.classList.replace('border-blue-600', 'border-transparent');
+                });
+                btn.classList.replace('text-gray-500', 'text-blue-600');
+                btn.classList.replace('border-transparent', 'border-blue-600');
+                document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
+                document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('hidden');
+            };
+        });
+
+        async function api(accion, data = {}) {
+            showLoading(true);
+            try {
+                const payload = { accion: accion, password: storedPassword, ...data };
+                const formData = new URLSearchParams();
+                for(let k in payload) formData.append(k, payload[k]);
+                const res = await fetch(SCRIPT_URL, { method: 'POST', body: formData });
+                const json = await res.json();
+                if(json.status === 'error') throw new Error(json.message);
+                return json;
+            } catch (e) {
+                toast(e.message, 'error');
+                throw e;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function login(pass) {
+            try {
+                await api('login', { password: pass });
+                storedPassword = pass;
+                sessionStorage.setItem('tandaPass', pass);
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('app-screen').classList.remove('hidden');
+                await loadData();
+                document.querySelector('[data-tab="config"]').click();
+            } catch(e) {}
+        }
+
+        async function loadData() {
+            const res = await api('loadData');
+            appData = res;
+            uiState.pendingGridChanges = {};
+            uiState.originalGrid = JSON.parse(JSON.stringify(appData.cuadricula));
+            updatePendingBar();
+            renderAll();
+        }
+
+        function renderAll() {
+            document.getElementById('tanda-name').textContent = appData.config.nombreTanda;
+            document.getElementById('cfg-nombre').value = appData.config.nombreTanda;
+            document.getElementById('cfg-semanas').value = appData.config.totalSemanas;
+            document.getElementById('cfg-numeros').value = appData.config.numerosPorSemana;
+            document.getElementById('cfg-valor').value = appData.config.valorPorNumero;
+            renderParticipantesMerged();
+            renderCuadriculaSmart();
+            renderPagosAdvanced();
+        }
+
+        function renderParticipantesMerged() {
+            const tbody = document.getElementById('part-table-body'); tbody.innerHTML = '';
+            let totalNumerosOcupados = 0;
+            appData.participantes.sort((a,b) => a.Nombre.localeCompare(b.Nombre));
+            appData.participantes.forEach(p => {
+                const tandaEntry = appData.tandaNumeros.find(tn => tn.Nombre === p.Nombre);
+                const numCount = tandaEntry ? parseInt(tandaEntry.TotalNumeros) : 0;
+                totalNumerosOcupados += numCount;
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition";
+                tr.innerHTML = `<td class="p-3 font-medium">${p.Nombre}</td><td class="p-3 text-center"><input type="number" min="0" class="num-input w-20 p-1 border rounded text-center font-bold text-blue-800" value="${numCount}" data-original="${numCount}" data-name="${p.Nombre}"></td><td class="p-3 text-center"><button class="btn-del text-red-500 hover:bg-red-50 p-2 rounded" data-name="${p.Nombre}"><i class="ph-bold ph-trash"></i></button></td>`;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('part-counter').textContent = totalNumerosOcupados;
+        }
+        document.getElementById('form-add-part').onsubmit = async (e) => { e.preventDefault(); await api('addParticipant', { nombre: document.getElementById('new-part-name').value }); await loadData(); document.getElementById('new-part-name').value = ''; };
+        document.getElementById('part-table-body').addEventListener('click', async (e) => { if (e.target.closest('.btn-del')) { const n = e.target.closest('.btn-del').dataset.name; if(confirm(`¿Borrar a ${n}?`)) { await api('deleteParticipant', { nombre: n }); await loadData(); } } });
+        document.getElementById('btn-save-numbers').onclick = async () => {
+            const inputs = document.querySelectorAll('.num-input'); let changes = [];
+            inputs.forEach(input => { if(input.value !== input.dataset.original) changes.push({ nombre: input.dataset.name, total: input.value }); });
+            if(changes.length === 0) return toast('Sin cambios', 'info');
+            showLoading(true);
+            for(let change of changes) await api('setTandaNumeros', { nombre: change.nombre, totalNumeros: change.total });
+            showLoading(false); toast('¡Cambios Guardados!', 'success'); await loadData();
+        };
+
+        function renderCuadriculaSmart() {
+            const semanas = parseInt(appData.config.totalSemanas); const numeros = parseInt(appData.config.numerosPorSemana);
+            const userListEl = document.getElementById('grid-user-list'); userListEl.innerHTML = '';
+            appData.tandaNumeros.forEach(tn => {
+                if(tn.TotalNumeros > 0) {
+                    let count = 0;
+                    appData.cuadricula.forEach(c => { if(c.AsignadoA === tn.Nombre) count++; });
+                    for(let key in uiState.pendingGridChanges) {
+                        const [s, n] = key.split('-'); const nuevoDueño = uiState.pendingGridChanges[key];
+                        const originalOwner = getOwnerOfCell(s, n, true);
+                        if (originalOwner === tn.Nombre && nuevoDueño !== tn.Nombre) count--;
+                        if (nuevoDueño === tn.Nombre && originalOwner !== tn.Nombre) count++;
+                    }
+                    const totalOwns = parseInt(tn.TotalNumeros); const isFull = count >= totalOwns;
+                    const div = document.createElement('div');
+                    div.className = `p-3 rounded cursor-pointer border transition flex justify-between items-center ${uiState.gridSelectedUser === tn.Nombre ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white hover:bg-gray-50 border-gray-200'}`;
+                    div.innerHTML = `<span class="font-medium truncate">${tn.Nombre}</span><span class="text-xs font-bold px-2 py-1 rounded bg-opacity-20 ${isFull ? 'bg-green-500 text-white' : 'bg-gray-800 text-gray-800 bg-white'}">${count}/${totalOwns}</span>`;
+                    div.onclick = () => { uiState.gridSelectedUser = tn.Nombre; document.getElementById('grid-status').classList.remove('hidden'); document.getElementById('grid-status').textContent = `Asignando: ${tn.Nombre} (${count}/${totalOwns})`; renderCuadriculaSmart(); };
+                    userListEl.appendChild(div);
+                }
+            });
+            const table = document.getElementById('cuadricula-table');
+            let html = '<thead><tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wide sticky top-0 z-10"><th class="p-2 border">#</th>';
+            for(let s=1; s<=semanas; s++) html += `<th class="p-2 border text-center">Sem ${s}</th>`;
+            html += '</tr></thead><tbody>';
+            for(let n=1; n<=numeros; n++) {
+                html += `<tr><td class="p-2 border bg-slate-50 font-bold text-center text-gray-500">${n}</td>`;
+                for(let s=1; s<=semanas; s++) {
+                    const owner = getOwnerOfCell(s, n);
+                    let cellClass = "bg-white"; let content = owner || '<i class="ph-bold ph-plus text-gray-300"></i>';
+                    if(owner) { if(owner === uiState.gridSelectedUser) cellClass = "bg-blue-200 text-blue-800 font-bold border-2 border-blue-400"; else cellClass = "bg-green-100 text-green-800 font-medium"; }
+                    else if(uiState.gridSelectedUser) { cellClass = "bg-white hover:bg-blue-50 cursor-pointer text-gray-300 hover:text-blue-400"; }
+                    if(uiState.pendingGridChanges.hasOwnProperty(`${s}-${n}`)) cellClass += " ring-2 ring-yellow-400 ring-inset";
+                    html += `<td class="grid-cell border p-1 text-center transition ${cellClass}" onclick="handleLocalGridClick(${s}, ${n}, '${owner || ''}')">${content}</td>`;
+                } html += '</tr>';
+            } html += '</tbody>'; table.innerHTML = html;
+        }
+        function getOwnerOfCell(s, n, ignorePending = false) {
+            const key = `${s}-${n}`; if (!ignorePending && uiState.pendingGridChanges.hasOwnProperty(key)) return uiState.pendingGridChanges[key];
+            const entry = appData.cuadricula.find(c => c.Semana == s && c.Numero == n); return entry ? entry.AsignadoA : "";
+        }
+        function handleLocalGridClick(semana, numero, currentOwner) {
+            if(!uiState.gridSelectedUser) return toast('Selecciona una persona a la izquierda.', 'info');
+            const currentUser = uiState.gridSelectedUser; const key = `${semana}-${numero}`; let newOwner = currentOwner;
+            if (currentOwner === currentUser) newOwner = ""; else if (currentOwner === "") newOwner = currentUser; else { toast(`Ocupado por ${currentOwner}`, 'error'); return; }
+            uiState.pendingGridChanges[key] = newOwner; updatePendingBar(); renderCuadriculaSmart();
+        }
+        function updatePendingBar() { const count = Object.keys(uiState.pendingGridChanges).length; document.getElementById('pending-changes-bar').classList.toggle('hidden', count === 0); }
+        document.getElementById('btn-discard-changes').onclick = () => { if(confirm("¿Deshacer todos los cambios no guardados?")) { uiState.pendingGridChanges = {}; updatePendingBar(); renderCuadriculaSmart(); } };
+        document.getElementById('btn-commit-changes').onclick = async () => {
+            const changes = uiState.pendingGridChanges; const keys = Object.keys(changes); if (keys.length === 0) return;
+            showLoading(true);
+            try {
+                let cambiosArray = []; keys.forEach(key => { const [s, n] = key.split('-'); cambiosArray.push({ semana: s, numero: n, nombre: changes[key] }); });
+                await api('saveGridBatch', { cambios: JSON.stringify(cambiosArray) });
+                uiState.pendingGridChanges = {}; updatePendingBar(); toast('¡Cambios Guardados!', 'success'); await loadData();
+            } catch(e) { toast('Error al guardar', 'error'); } finally { showLoading(false); }
+        };
+
+        function renderPagosAdvanced() {
+            const select = document.getElementById('pago-semana-select');
+            if(select.options.length === 0) for(let i=1; i<=appData.config.totalSemanas; i++) select.add(new Option(`Semana ${i}`, i));
+            const curSem = select.value || 1;
+            const valNum = parseFloat(appData.config.valorPorNumero);
+            const gridRows = parseInt(appData.config.numerosPorSemana);
+
+            let totalNumerosVendidos = 0;
+            appData.tandaNumeros.forEach(tn => totalNumerosVendidos += parseInt(tn.TotalNumeros));
+            const dineroTotalRecaudado = totalNumerosVendidos * valNum; 
+            const valorPorCasilla = dineroTotalRecaudado / gridRows; 
+
+            const receptores = appData.cuadricula.filter(c => c.Semana == curSem && c.AsignadoA).map(c => c.AsignadoA);
+            const conteoReceptores = {}; receptores.forEach(r => conteoReceptores[r] = (conteoReceptores[r] || 0) + 1);
+
+            const container = document.getElementById('payout-container'); container.innerHTML = '';
+            if(Object.keys(conteoReceptores).length === 0) container.innerHTML = '<p class="text-white opacity-50">Nadie recibe esta semana.</p>';
+
+            for (let nombre in conteoReceptores) {
+                const casillasGanadas = conteoReceptores[nombre];
+                const montoBruto = casillasGanadas * valorPorCasilla;
+
+                const pagoEntry = appData.pagos.find(p => p.Semana == curSem && p.Nombre === nombre);
+                const pagado = pagoEntry && pagoEntry.Estado === 'PAGADO';
+                const numProp = appData.tandaNumeros.find(tn => tn.Nombre === nombre).TotalNumeros;
+                const deuda = numProp * valNum;
+                const neto = pagado ? montoBruto : (montoBruto - deuda);
+
+                // --- VALIDACIÓN DE ENTREGA DE PREMIO ---
+                // Checamos si en la cuadrícula, los números de esta persona esta semana tienen la col 4 como 'ENTREGADO'
+                // Si al menos UNO está entregado, asumimos que ya se le pagó (o parcial).
+                // Para simplicidad: Si marcamos entrega, se marca para todos sus números de esa semana.
+                const isEntregado = appData.cuadricula.some(c => c.Semana == curSem && c.AsignadoA === nombre && c.EstadoEntrega === 'ENTREGADO');
+
+                const card = document.createElement('div');
+                card.className = "bg-white/10 border border-white/20 p-4 rounded-lg backdrop-blur-sm relative overflow-hidden";
+                card.innerHTML = `
+                    <div class="absolute top-0 right-0 p-4 opacity-10"><i class="ph-fill ph-money text-6xl text-white"></i></div>
+                    <div class="flex justify-between items-start mb-3 relative z-10">
+                        <div><h4 class="text-2xl font-bold text-white">${nombre}</h4><span class="text-blue-300 text-xs font-bold uppercase tracking-wider">Ganador Semana ${curSem}</span></div>
+                        <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded font-bold shadow">${casillasGanadas} Casillas</span>
+                    </div>
+                    <div class="space-y-1 relative z-10 border-t border-white/10 pt-3 mt-2">
+                        <div class="flex justify-between text-sm text-slate-300"><span>Monto a Recibir:</span> <span>$${montoBruto.toLocaleString()}</span></div>
+                        ${!pagado ? `<div class="flex justify-between text-sm text-red-300 font-bold"><span>Menos su Aporte:</span> <span>-$${deuda.toLocaleString()}</span></div>` : '<div class="flex justify-between text-sm text-green-300"><span>Aporte:</span> <span>PAGADO</span></div>'}
+                        <div class="flex justify-between text-xl font-bold text-white pt-2 border-t border-white/10 mt-2"><span>Total a Entregar:</span> <span class="${!pagado ? 'text-yellow-400' : 'text-green-400'}">$${neto.toLocaleString()}</span></div>
+                    </div>
+                    <div class="mt-4 relative z-10">
+                        <button onclick="toggleDelivery(${curSem}, '${nombre}', '${isEntregado ? '' : 'ENTREGADO'}')" 
+                                class="w-full py-2 rounded font-bold text-sm shadow-lg transition transform active:scale-95 
+                                ${isEntregado ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-yellow-400 text-yellow-900 hover:bg-yellow-300'}">
+                            ${isEntregado ? 'TANDA ENTREGADA ✅' : 'ENTREGAR PREMIO <i class="ph-bold ph-hand-coins"></i>'}
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            }
+
+            const list = document.getElementById('pago-list'); list.innerHTML = '';
+            appData.tandaNumeros.forEach(p => {
+                if (p.TotalNumeros > 0) {
+                    const pg = appData.pagos.find(x => x.Semana == curSem && x.Nombre === p.Nombre); const isPd = pg && pg.Estado === 'PAGADO'; const mt = p.TotalNumeros * valNum;
+                    const d = document.createElement('div'); d.className = "p-4 flex justify-between items-center hover:bg-gray-50";
+                    d.innerHTML = `<div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${isPd ? 'bg-green-500' : 'bg-gray-300'}">${p.Nombre.charAt(0)}</div><div><div class="font-bold text-gray-800">${p.Nombre}</div><div class="text-xs text-gray-500">${p.TotalNumeros} núm. x $${valNum} = $${mt}</div></div></div><button class="px-4 py-2 rounded font-bold text-sm transition ${isPd ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-600 border hover:bg-gray-200'}" onclick="togglePago(${curSem}, '${p.Nombre}', '${isPd ? 'PENDIENTE' : 'PAGADO'}')">${isPd ? 'PAGADO <i class="ph-bold ph-check"></i>' : 'MARCAR PAGO'}</button>`;
+                    list.appendChild(d);
+                }
+            });
+        }
+        document.getElementById('pago-semana-select').onchange = renderPagosAdvanced;
+        async function togglePago(s, n, st) { await api('markPayment', { semana: s, nombre: n, estado: st }); await loadData(); }
+        async function toggleDelivery(s, n, st) { await api('toggleDelivery', { semana: s, nombre: n, estado: st }); toast(st ? '¡Premio Entregado!' : 'Marca removida', 'success'); await loadData(); }
+
+        document.getElementById('form-config').onsubmit = async (e) => { e.preventDefault(); await api('saveConfig', { nombreTanda: document.getElementById('cfg-nombre').value, totalSemanas: document.getElementById('cfg-semanas').value, numerosPorSemana: document.getElementById('cfg-numeros').value, valorPorNumero: document.getElementById('cfg-valor').value }); toast('¡Cambios Guardados!', 'success'); await loadData(); };
+        document.getElementById('form-archive').onsubmit = async (e) => { e.preventDefault(); if(!confirm("¿Reiniciar todo?")) return; await api('archiveAndReset', { nombreTanda: document.getElementById('arch-nombre').value, totalSemanas: document.getElementById('arch-semanas').value, numerosPorSemana: document.getElementById('arch-numeros').value, valorPorNumero: document.getElementById('arch-valor').value }); toast('¡Cambios Guardados!', 'success'); await loadData(); };
+
+        function showLoading(b) { document.getElementById('loading-overlay').classList.toggle('hidden', !b); }
+        function toast(m, t) { const el = document.getElementById('toaster'); el.textContent = m; el.className = `fixed bottom-24 right-5 px-6 py-3 rounded shadow-lg text-white font-medium transform transition-all z-50 ${t === 'error' ? 'bg-red-600' : 'bg-green-600'} translate-y-0 opacity-100`; setTimeout(() => { el.classList.add('translate-y-20', 'opacity-0'); }, 3000); }
+    </script>
+</body>
+</html>
