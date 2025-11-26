@@ -3,25 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Tandas V6 (Entregas)</title>
+    <title>Admin Tandas V6 (Scroll Libre)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
         .grid-cell { min-height: 50px; font-size: 0.75rem; line-height: 1.1; word-break: break-word; cursor: pointer; user-select: none; }
         .grid-cell:hover { filter: brightness(0.95); }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        /* Estilos para el Toast */
+        #toaster { transition: all 0.3s ease; }
+        
+        /* Spinner */
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .slide-up { animation: slideUp 0.3s ease-out forwards; }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans">
 
     <div id="login-screen" class="flex items-center justify-center min-h-screen">
-        <div class="w-full max-w-sm p-8 bg-white rounded-2xl shadow-lg">
+        <div class="w-full max-w-sm p-8 bg-white rounded-2xl shadow-lg m-4">
             <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Administrar Tanda</h1>
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-600 mb-2">Contraseña</label>
@@ -32,13 +31,14 @@
         </div>
     </div>
 
-    <div id="app-screen" class="hidden flex flex-col h-screen relative">
-        <header class="bg-slate-900 text-white p-4 shadow-md flex-none z-20 flex justify-between items-center">
+    <div id="app-screen" class="hidden min-h-screen flex flex-col">
+        
+        <header class="bg-slate-900 text-white p-4 shadow-md z-20 flex justify-between items-center sticky top-0">
             <div><h1 id="tanda-name" class="text-xl font-bold">Cargando...</h1><p class="text-xs text-slate-400">Panel de Control V6</p></div>
             <button id="btn-logout" class="text-sm bg-red-600 px-3 py-1 rounded hover:bg-red-700 transition flex items-center gap-1"><i class="ph-bold ph-sign-out"></i> Salir</button>
         </header>
 
-        <nav class="bg-white shadow-sm flex-none z-10 border-b">
+        <nav class="bg-white shadow-sm z-10 border-b sticky top-[70px]">
             <div class="container mx-auto flex overflow-x-auto">
                 <button data-tab="config" class="tab-btn px-4 py-3 text-sm font-semibold text-gray-500 border-b-4 border-transparent hover:text-blue-600 whitespace-nowrap"><i class="ph-fill ph-gear mr-1"></i> Configuración</button>
                 <button data-tab="participantes" class="tab-btn px-4 py-3 text-sm font-semibold text-gray-500 border-b-4 border-transparent hover:text-blue-600 whitespace-nowrap"><i class="ph-fill ph-users-three mr-1"></i> Participantes</button>
@@ -48,8 +48,8 @@
             </div>
         </nav>
 
-        <main class="flex-grow overflow-y-auto p-4 bg-gray-100 pb-24">
-            <div class="container mx-auto max-w-6xl h-full">
+        <main class="flex-grow p-4 bg-gray-100 pb-20">
+            <div class="container mx-auto max-w-6xl">
                 
                 <div id="tab-config" class="tab-content hidden space-y-6">
                     <form id="form-config" class="bg-white p-6 rounded-lg shadow-sm border">
@@ -74,34 +74,37 @@
                         <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Agregar</button>
                     </form>
                     <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
-                        <table class="w-full text-left border-collapse">
-                            <thead class="bg-gray-50 border-b"><tr><th class="p-3">Nombre</th><th class="p-3 text-center w-32">Números</th><th class="p-3 text-center w-20">Borrar</th></tr></thead>
-                            <tbody id="part-table-body" class="divide-y"></tbody>
-                        </table>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[300px]">
+                                <thead class="bg-gray-50 border-b"><tr><th class="p-3">Nombre</th><th class="p-3 text-center w-32">Números</th><th class="p-3 text-center w-20">Borrar</th></tr></thead>
+                                <tbody id="part-table-body" class="divide-y"></tbody>
+                            </table>
+                        </div>
                         <div class="p-4 bg-gray-50 border-t flex justify-end"><button id="btn-save-numbers" class="bg-blue-600 text-white px-6 py-2 rounded font-bold shadow hover:bg-blue-700 flex items-center gap-2"><i class="ph-bold ph-floppy-disk"></i> GUARDAR CAMBIOS</button></div>
                     </div>
                 </div>
 
-                <div id="tab-cuadricula" class="tab-content hidden h-[calc(100vh-180px)] flex flex-col">
-                    <div class="flex flex-col md:flex-row gap-4 h-full">
+                <div id="tab-cuadricula" class="tab-content hidden flex flex-col space-y-6">
+                    
+                    <div class="flex flex-col md:flex-row gap-6 items-start">
                         
-                        <div class="w-full md:w-1/4 bg-white rounded-lg shadow-sm border flex flex-col overflow-hidden h-1/3 md:h-auto flex-none">
+                        <div class="w-full md:w-1/4 bg-white rounded-lg shadow-sm border flex flex-col">
                             <div class="p-3 bg-gray-50 border-b"><h3 class="font-bold text-gray-700">1. Selecciona Persona</h3><p class="text-xs text-gray-500">Clic para activar asignación</p></div>
-                            <div id="grid-user-list" class="overflow-y-auto flex-grow p-2 space-y-1"></div>
+                            <div id="grid-user-list" class="max-h-60 md:max-h-[500px] overflow-y-auto p-2 space-y-1"></div>
                         </div>
 
-                        <div class="w-full md:w-3/4 bg-white rounded-lg shadow-sm border flex flex-col overflow-hidden h-2/3 md:h-auto flex-grow">
+                        <div class="w-full md:w-3/4 bg-white rounded-lg shadow-sm border flex flex-col">
                             
-                            <div class="p-3 bg-gray-50 border-b flex justify-between items-center flex-none">
+                            <div class="p-3 bg-gray-50 border-b flex justify-between items-center sticky top-0 z-10">
                                 <div><h3 class="font-bold text-gray-700">2. Dibuja en la Tabla</h3><p class="text-xs text-gray-500">Cambios locales.</p></div>
-                                <div id="grid-status" class="text-xs font-bold px-3 py-1 bg-blue-100 text-blue-800 rounded-full hidden">Modo Asignación</div>
+                                <div id="grid-status" class="text-xs font-bold px-3 py-1 bg-blue-100 text-blue-800 rounded-full hidden">Asignando...</div>
                             </div>
                             
-                            <div class="overflow-auto flex-grow p-4 bg-slate-50 relative">
-                                <table id="cuadricula-table" class="w-full border-collapse bg-white shadow-sm"></table>
+                            <div class="overflow-x-auto p-4 bg-slate-50">
+                                <table id="cuadricula-table" class="w-full border-collapse bg-white shadow-sm min-w-max"></table>
                             </div>
 
-                            <div id="grid-actions-footer" class="hidden flex-none p-4 bg-yellow-50 border-t-2 border-yellow-400 flex flex-col sm:flex-row justify-between items-center gap-3 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-10">
+                            <div id="grid-actions-footer" class="hidden p-4 bg-yellow-50 border-t-2 border-yellow-400 flex flex-col sm:flex-row justify-between items-center gap-3">
                                 <div class="flex items-center gap-2 text-yellow-800 font-bold text-sm">
                                     <i class="ph-fill ph-warning text-xl"></i>
                                     <span>Hay cambios sin guardar</span>
@@ -155,11 +158,12 @@
     </div>
 
     <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex flex-col items-center justify-center text-white backdrop-blur-sm"><div class="loader mb-4"></div><p id="loading-text" class="text-lg font-semibold">Procesando...</p></div>
-    <div id="toaster" class="fixed bottom-24 right-5 px-6 py-3 rounded shadow-lg text-white font-medium transform translate-y-20 opacity-0 transition-all z-50"></div>
+    
+    <div id="toaster" class="fixed bottom-5 right-5 px-6 py-3 rounded shadow-lg text-white font-medium transform translate-y-20 opacity-0 transition-all z-[60]"></div>
 
     <script>
         // --- CONFIGURACIÓN ---
-        // ⚠️ PEGA TU URL DE GOOGLE APPS SCRIPT AQUÍ ABAJO:
+        // ⚠️ PEGA TU URL DE GOOGLE APPS SCRIPT AQUÍ:
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw2L85yws1EoFz2m_6jrtawffuAma8sKeYThMFxU51oFuf8KTdd9-2zc48Rng9nd6Tx/exec"; 
         
         let appData = { config: {}, participantes: [], tandaNumeros: [], cuadricula: [], pagos: [] };
@@ -180,6 +184,8 @@
                 btn.classList.replace('border-transparent', 'border-blue-600');
                 document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
                 document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('hidden');
+                // Scroll al inicio al cambiar pestaña
+                window.scrollTo(0, 0);
             };
         });
 
@@ -281,11 +287,11 @@
                 }
             });
             const table = document.getElementById('cuadricula-table');
-            let html = '<thead><tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wide sticky top-0 z-10"><th class="p-2 border">#</th>';
-            for(let s=1; s<=semanas; s++) html += `<th class="p-2 border text-center">Sem ${s}</th>`;
+            let html = '<thead><tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wide sticky top-0 z-10"><th class="p-2 border bg-slate-100">#</th>';
+            for(let s=1; s<=semanas; s++) html += `<th class="p-2 border text-center bg-slate-100 min-w-[60px]">Sem ${s}</th>`;
             html += '</tr></thead><tbody>';
             for(let n=1; n<=numeros; n++) {
-                html += `<tr><td class="p-2 border bg-slate-50 font-bold text-center text-gray-500">${n}</td>`;
+                html += `<tr><td class="p-2 border bg-slate-50 font-bold text-center text-gray-500 sticky left-0 z-0">${n}</td>`;
                 for(let s=1; s<=semanas; s++) {
                     const owner = getOwnerOfCell(s, n);
                     let cellClass = "bg-white"; let content = owner || '<i class="ph-bold ph-plus text-gray-300"></i>';
@@ -307,7 +313,6 @@
             uiState.pendingGridChanges[key] = newOwner; updatePendingBar(); renderCuadriculaSmart();
         }
 
-        // --- ACTUALIZADO: AHORA CONTROLA EL FOOTER INTEGRADO, NO LA BARRA FLOTANTE ---
         function updatePendingBar() { 
             const count = Object.keys(uiState.pendingGridChanges).length; 
             const footer = document.getElementById('grid-actions-footer');
@@ -397,7 +402,7 @@
         document.getElementById('form-archive').onsubmit = async (e) => { e.preventDefault(); if(!confirm("¿Reiniciar todo?")) return; await api('archiveAndReset', { nombreTanda: document.getElementById('arch-nombre').value, totalSemanas: document.getElementById('arch-semanas').value, numerosPorSemana: document.getElementById('arch-numeros').value, valorPorNumero: document.getElementById('arch-valor').value }); toast('¡Cambios Guardados!', 'success'); await loadData(); };
 
         function showLoading(b) { document.getElementById('loading-overlay').classList.toggle('hidden', !b); }
-        function toast(m, t) { const el = document.getElementById('toaster'); el.textContent = m; el.className = `fixed bottom-24 right-5 px-6 py-3 rounded shadow-lg text-white font-medium transform transition-all z-50 ${t === 'error' ? 'bg-red-600' : 'bg-green-600'} translate-y-0 opacity-100`; setTimeout(() => { el.classList.add('translate-y-20', 'opacity-0'); }, 3000); }
+        function toast(m, t) { const el = document.getElementById('toaster'); el.textContent = m; el.className = `fixed bottom-5 right-5 px-6 py-3 rounded shadow-lg text-white font-medium transform transition-all z-[60] ${t === 'error' ? 'bg-red-600' : 'bg-green-600'} translate-y-0 opacity-100`; setTimeout(() => { el.classList.add('translate-y-20', 'opacity-0'); }, 3000); }
     </script>
 </body>
 </html>
